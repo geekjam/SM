@@ -179,12 +179,19 @@ def OtherCommand(command):
     else:
         sep = "/"
 
+
     if len(cmds) == 2:
         if cmds[0] == "cd":
             if cmds[1] == "..":
-                Pwd = Pwd[:Pwd.rfind(sep)] + sep
+                print Pwd
+                if Pwd[len(Pwd)-1:] != ":":
+                        pwd = ""
+                        pwd = Pwd[:len(Pwd)-1]
+
+                Pwd = Pwd[:pwd.rfind(sep)] + sep
                 PromptInit()
                 return
+            
             if cmds[1] != "":
                 if System == "Windows":
                     if cmds[1].find(":") > 0:
