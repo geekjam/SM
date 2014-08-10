@@ -8,7 +8,11 @@ def Init():
 	print Core.Config.GetConfig("soft", "name") + " by " + Core.Config.GetConfig("soft", "god")
 	print "Version:" + Core.Config.GetConfig("soft", "version")
 	while True:
-		inputStr = raw_input(Prompt)
+		try:
+			inputStr = raw_input(Prompt)
+		except KeyboardInterrupt:
+			Exit()
+
 		if InputCallBack != None:
 			InputCallBack(inputStr)
 
