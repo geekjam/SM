@@ -3,12 +3,12 @@ def HookCommandTest():
 	print "I am test command, From test module."
 
 def Test():
-	test = Core.Config.GetConfig("system","soft", "welcome")
-	test = test.replace("\\r","\r")
-	test = test.replace("\\n","\n")
-	#print test
+	httpClient = Core.Http.HttpClient("http://cn.bing.com/az/hprichbg/rb/DaintreeNP_ZH-CN9005339324_1366x768.jpg")
+	f = open("./Data/test.jpg", "w")
+	f.write(httpClient.GetData())
+	f.close()
 	pass
 
 def Init():
 	Core.Command.CommandAdd("test", HookCommandTest, "test module")
-	Test()
+	#Test()

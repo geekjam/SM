@@ -17,10 +17,13 @@ class HttpClient():
 		try:
 			return text.decode("utf-8")
 		except Exception, e:
-			return text.decode("gbk")
+			try:
+				return text.decode("gbk")
+			except:
+				return text
 
-	def GetString(self):
-		retString = ""
+	def GetData(self):
+		retData = None
 		cj = cookielib.CookieJar()
 		opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
 		urllib2.install_opener(opener)
@@ -38,10 +41,12 @@ class HttpClient():
 			compresseddata = self.Reponse.read()
 			compressedstream = StringIO(compresseddata)
 			gzipper = gzip.GzipFile(fileobj=compressedstream)
-			retString = gzipper.read()
+			return gzipper.read()
 		else:
-			retString = self.Reponse.read()
-		
+			return self.Reponse.read()
+
+	def GetString(self):
+		retString = self.GetData()
 		retString = self.ToUtf8(retString)
 		return retString
 
